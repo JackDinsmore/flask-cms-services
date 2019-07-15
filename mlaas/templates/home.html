@@ -1,0 +1,80 @@
+<DOCTYPE! html>
+<head>
+<title>MLaaS</title>
+<style>
+body {
+  font-family:Arial, sans-serif;
+}
+table {
+  border-collapse: collapse;
+  width: 60%;
+}
+
+td, th {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+
+tr:nth-child(even) {
+  background-color: #dddddd;
+}
+</style>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
+<script type="text/javascript" charset="utf-8">
+var socket = io.connect('http://' + document.domain + ':' + location.port);
+/*socket.on('connect', function() {
+    socket.emit('connected');
+    console.log('Connected');
+});
+socket.on('debug', function(data) {
+    console.log(data);
+});
+socket.on('status', function(package_data) {
+    console.log("received")
+    var dataTable=document.getElementById("data");
+
+    // Clean up table
+    for (var i = 0; i < dataTable.rows.length-1; ) {
+        dataTable.deleteRow(1);
+    }
+
+    // Post data
+    for (var i = 0; i < package_data.length; i++) {
+        var row = dataTable.insertRow(i+1);
+        var cell1 = row.insertCell(0);
+        var cell2 = row.insertCell(1);
+        var cell3 = row.insertCell(2);
+        var cell4 = row.insertCell(3);
+        cell1.innerHTML = package_data[i]['name'];
+        cell2.innerHTML = package_data[i]['id'];
+        cell3.innerHTML = package_data[i]['status'];
+        cell4.innerHTML = package_data[i]['type'];
+    }
+});
+
+function repeat(){
+    socket.emit("update")
+    console.log("repeat")
+}
+
+setInterval(repeat, 1000);*/
+</script>
+</head>
+
+<body>
+<h1>Job Queue</h1>
+<a href="/status">Status</a>
+<p> Hello! This is all the packages we are processing.</p>
+
+<table id="data">
+    <tr>
+        <th>Name</th>
+        <th>ID</th>
+        <th>Status</th>
+        <th>Package type</th>
+    </tr>
+</table>
+
+</body>
+</html>
