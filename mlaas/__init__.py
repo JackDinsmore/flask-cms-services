@@ -1,103 +1,181 @@
-import os, time, sys
-
+import os, time, sys, ntpath, logging
 from flask import Flask, request, render_template
 import flask_socketio as io
 import multiprocessing as mp
 from . import ml_functions as ml
 import numpy as np
 
-global clients, pkg_data, max_id, first_connection, kernel
-clients = []
-pkg_data = None# temporary
-kernel = None# temporary
+global pages, pkg_data, max_id, first_connection, kernel, manager, pkg_data, data_in
+pages = []
+
+# Temporary initializations for shared memory
+manager = None
+pkg_data = None
+data_in = None
+results_out = None
+kernel = None
+
 max_id=0
 first_connection = True
 
 app = Flask(__name__, instance_relative_config=True)
-socketio = io.SocketIO()
+socketio = io.SocketIO(app)
 
-def run(pkg_data):
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
+def initialize():
+    global pkg_data, first_connection, kernel, manager, pkg_data, data_in
+    if first_connection:
+        manager = mp.Manager()
+        pkg_data = manager.list()
+        data_in = manager.list()
+        #results_out = manager.list()
+        kernel = mp.Process(target=run, args=(pkg_data, data_in))
+        kernel.daemon = True
+        kernel.start()
+        first_connection= False
+        print("\nINITIALIZED\n")
+
+
+def convert_to_json(package_data):
+    ret = []
+    for item in package_data:
+        ret.append(dict(item))
+    return ret
+
+
+def run(pkg_data, data_in):
     while True:
         now = time.time()
-        for i in range(len(pkg_data)):
-            if pkg_data[i]['timeout'] != None and now > pkg_data[i]['timeout']:
+        i = 0
+        # Do deletions if necessary
+        while i < len(pkg_data):
+            if pkg_data[i]['timeout'] > 0 and now > pkg_data[i]['timeout']:
                 pkg_data[i]['status'] = 'timed out'
+            if pkg_data[i]['status'] == 'error' or pkg_data[i]['status'] == 'finished':
+                if now > pkg_data[i]['delete']:
+                    # Remove package
+                    j = 0
+                    for package in data_in:
+                        if package['id'] == pkg_data[i]['id']:
+                            del data_in[j]
+                            break
+                        j += 1
+                    del pkg_data[i]
+                    continue
+            i += 1
 
         for i in range(len(pkg_data)):
             if pkg_data[i]['status'] == 'waiting':
                 pkg_data[i]['status'] = 'running'
                 try:
-                    result = ml.predict(np.random.rand(1, 28, 28, 1))#pkg_data[i]['data'])
+                    data = None
+                    data_index = 0
+                    for package in data_in:
+                        if package['id'] == pkg_data[i]['id']:
+                            data = package['data']
+                            break
+                        data_index += 1
+                    if data is None:
+                        raise RuntimeError("The data containers and package containers became desynced")
+                    result = ml.predict(data)
                     pkg_data[i]['status'] = 'finished'
-                    print("Result!:", result)
                     pkg_data[i]['result'] = result
-                    print("Success")
+                    pkg_data[i]['delete'] = time.time() + 15
                 except:
                     pkg_data[i]['status'] = 'error'
-                    #print(sys.exc_info())
+                    pkg_data[i]['error_type'] = str(sys.exc_info()[0].__name__)
+                    pkg_data[i]['error_value'] = str(sys.exc_info()[1])
+                    tb = sys.exc_info()[2]
+                    pkg_data[i]['error_tb'] = ''
+                    while tb != None:
+                        if ntpath.basename(__file__) == ntpath.basename(tb.tb_frame.f_code.co_filename):
+                            pkg_data[i]['error_tb'] += str(tb.tb_lineno) + ' '
+                        tb = tb.tb_next
+                    if pkg_data[i]['error_tb'][-1] == ' ':
+                        pkg_data[i]['error_tb'] = pkg_data[i]['error_tb'][:-1]
+                    del tb
+                    pkg_data[i]['delete'] = time.time() + 60
                 break
 
 def check_validity(form):
     if 'name' not in form:
         return "Error: no name given"
-    #if 'data' not in form:
-    #    return "Error: no images were uploaded"
+    if 'data' not in form:
+        return "Error: no images were uploaded"
+    if 'num_samples' not in form:
+        return "Error: number of samples was not given"
+    try:
+        int(form['num_samples'])
+    except:
+        return "Error: number of samples was not an integer"
+    if manager == None:
+        return "Error: server is not ready"
     return ''
 
 def get_package(form):
     id = 'None'
-    try:
-        id = int(form['id'])
-    except:
-        return 'Error: the id '+form['id']+' is not valid'
+    if 'id' not in form:
+        return 'Error: no ID number was passed'
+    try: id = int(form['id'])
+    except: return "Error: the ID you provided is not a number"
     for package in pkg_data:
         if package['id'] == id:
             if package['status'] != 'finished':
                 return package['status']
             else:
                 return str(package['result'])
-    return 'Error: the id '+form['id']+' does not exist'
+    return 'Error: the ID '+form['id']+' does not exist'
 
 def push_package(form, address, hang = False):
-    global max_id
+    global max_id, manager
     validity = check_validity(form)
     id = max_id
     max_id += 1
     if validity != "":
         return "Invalid dataset: " + validity
-
-    package_type = 'predict'
-    timeout = None
     now = time.time()
-    if 'type' in form:
-        package_type = form['type']
-    if hang:
-        timeout = form['timeout'] + now
-    new_package={'name':form['name'], 'id':id, 'client_ip':address, 'timeout':timeout,
-        'type':package_type, 'status':'waiting', 'start':now }
-    if pkg_data is None:
-        return "Error: server not ready"
-    pkg_data.append(new_package)
+    new_package = manager.dict()
+    new_package['name']=form['name']
+    new_package['id']=id
+    new_package['client_ip']=address
+    new_package['status']='waiting'
+    new_package['start']=now
+    new_package['timeout']=-1
+    if 'timeout' in form:
+        try:
+            new_package['timeout'] = float(form['timeout']) + now
+        except: pass
 
-    for client in clients:
-        io.emit('status', list(pkg_data), namespace = '/', room=client)
+    data = np.frombuffer(bytes.fromhex(form['data']))
+    shape = (int(form['num_samples']), 28, 28, 1)
+    data = data.reshape(shape)
+    data_in.append(manager.dict({'id':id, 'data':data}))
+    pkg_data.append(new_package)
+    for page in pages:
+        io.emit('status', convert_to_json(pkg_data), namespace = '/', room=page)
 
     if not hang:
         return str(id)
     else:
         while True:
             time.sleep(1)
-            result = get_package(form)
+            package_request = {'id':id}
+            result = get_package(package_request)
             if result not in "waiting running".split():
                 return result
+
 
 @app.route('/', methods=['GET'])
 def home():
     return render_template('home.html')
 
+
 @app.route('/status', methods=['GET'])
 def status():
-    return render_template('status.html', client_mag = len(clients), kernel=kernel.is_alive())
+    return render_template('status.html', page_mag = len(pages), kernel=kernel.is_alive())
+
 
 @app.route('/', methods=['POST'])
 def receive():
@@ -105,34 +183,69 @@ def receive():
 
     if 'id' in request.form:
         return get_package(request.form)
-    if 'timeout' in request.form and (type(request.form['timeout']) == float or type(request.form['timeout']) == int)\
-        and request.form['timeout'] > 0:
+    if 'hang' in request.form and request.form['hang']:
         return push_package(request.form, request.remote_addr, hang=True)
     return push_package(request.form, request.remote_addr)
 
+    
+@app.route('/error', methods=['GET'])
+def error_request():
+    id = -1
+    try: id = int(request.args.get("id", default=-1))
+    except: pass
+    for package in pkg_data:
+        if package["id"]==id:
+            if package["status"] != 'error':
+                break
+            if "error_type" not in package or "error_value" not in package:
+                break
+            lines = package["error_tb"].split()
+            return render_template('error.html', id=request.args.get("id", default=None),
+                type=package["error_type"], value=package["error_value"], traceback=lines,
+                quantity = len(lines))
+    return render_template('error-invalid-id.html', id=request.args.get("id", default=None))
+
+    
+@app.route('/result', methods=['GET'])
+def result_request():
+    id = -1
+    try: id = int(request.args.get("id", default=-1))
+    except: pass
+    if pkg_data is None:
+        render_template('invalid-id.html', id=request.args.get("id", default=None))
+    for package in pkg_data:
+        if package["id"]==id:
+            if package["status"] != 'finished':
+                break
+            if "result" not in package:
+                break
+            best_numbers=[]
+            for prediction in package["result"]:
+                best_numbers.append(prediction.index(max(prediction)))
+            return render_template('result.html', id=request.args.get("id", default=None),
+                result=package["result"], best=best_numbers, quantity = len(package["result"]))
+    return render_template('invalid-id.html', id=request.args.get("id", default=None))
+
+
 @socketio.on('connected')
 def connected():
-    global pkg_data, first_connection, clients, kernel
-    if first_connection:
-        pkg_data = mp.Manager().list()
-        kernel = mp.Process(target=run, args=(pkg_data,))
-        kernel.daemon = True
-        kernel.start()
-        first_connection= False
+    initialize()
+    global pages
+    #if request.remote_addr == '127.0.0.1':
+    io.emit("debug", 'Confirmed connection')
+    io.emit('status', convert_to_json(pkg_data))
+    pages.append(request.sid)
 
-    if request.remote_addr == '127.0.0.1':
-        io.emit("debug", 'Confirmed connection')
-        io.emit('status', list(pkg_data))
-        clients.append(request.sid)
 
 @socketio.on('update')
 def update():
-    print("Update now")
-    io.emit('status', list(pkg_data))
+    if(pkg_data is not None):
+        io.emit('status', convert_to_json(pkg_data))
+    
     
 @socketio.on('disconnected')
-def connected():
-    global clients
-    if request.remote_addr == '127.0.0.1':
-        io.emit("debug", 'Confirmed disconnection')
-        clients.remove(request.sid)
+def disconnected():
+    global pages
+    #if request.remote_addr == '127.0.0.1':
+    io.emit("debug", 'Confirmed disconnection')
+    pages.remove(request.sid)

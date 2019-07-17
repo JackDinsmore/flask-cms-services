@@ -8,7 +8,7 @@ from keras import backend as K
 
 batch_size = 128
 num_classes = 10
-epochs = 12
+epochs = 1
 
 # input image dimensions
 img_rows, img_cols = 28, 28
@@ -57,5 +57,14 @@ score = model.evaluate(x_test, y_test, verbose=0)
 print('Test loss:', score[0])
 print('Test accuracy:', score[1])
 
+print('RELOAD')
 # Save model
-model.save("mlaas/mnist-cnn.h5")
+model.save("mnist-cnn.h5")
+
+model = keras.models.load_model("mnist-cnn.h5")
+
+score = model.evaluate(x_test, y_test, verbose=0)
+print('Test loss:', score[0])
+print('Test accuracy:', score[1])
+
+input()
