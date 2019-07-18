@@ -2,20 +2,21 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: "mnist-server"
+  name: helloworld-gke-4
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mnist-server
+      app: hello-4
   template:
     metadata:
       labels:
-        app: mnist-server
+        app: hello-4
     spec:
       containers:
-      - name: mnist-server
-        image: gcr.io/harrisgroup-223921/flask-keras-gke-1:latest
+      - name: hello-app
+        # Replace $GCLOUD_PROJECT with your project ID
+        image: gcr.io/harrisgroup-223921/helloworld-gke:latest
         # This app listens on port 8080 for web traffic by default.
         ports:
         - containerPort: 8080

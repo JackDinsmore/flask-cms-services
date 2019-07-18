@@ -1,0 +1,38 @@
+<DOCTYPE! html>
+<head>
+<title>MLaaS</title>
+<style>
+body {
+  font-family:Arial, sans-serif;
+}
+.error {
+    font-family: Consolas
+}
+</style>
+</head>
+
+<body>
+<h1>Error in process {{ id }}</h1>
+<a href="/">Home</a>
+
+<button onclick="retry({{ id }})">Retry</button>
+<script>
+  function retry(id) {
+    var socket = io.connect('http://' + document.domain + ':' + location.port);
+    socket.emit('reset', {'id':id})
+    console.log("Reset request sent")
+  }
+</script>
+
+<div class="error">
+<p style="color:red">Traceback</p>
+<p style="color:red">{{ type }}: {{ value }}</p>
+{% if quantity > 0 %}
+{% for i in range(quantity-1) %}
+<p style="color: gray">Main file, line {{ traceback[i] }}</p>
+{% endfor %}
+<p style="color: blue">Main file, line {{ traceback[quantity-1] }}</p>
+{% endif %}
+</div>
+</body>
+</html>
