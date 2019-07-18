@@ -18,7 +18,7 @@ while input() == '':
     data = data.tostring().hex()
     
     answer = requests.post("http://"+ip+":5000", 
-        data={'name': 'jd1', 'data':str(data), "num_samples":NUM_SAMPLES, 'hang':True}).text
+        data={'name': 'jd1', 'data':str(data), "num_samples":NUM_SAMPLES}).text
     if "Error" in answer or 'error' in answer:
         print(answer)
         continue
