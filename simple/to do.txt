@@ -1,0 +1,19 @@
+To do friday, 7/19/19
+
+Make it so you can quit and get the info back
+	Submit information back to the client as a dict, not a string. Or as a csv?
+
+GRCP
+
+Test for multiple random images
+
+Volume testing
+
+
+Document everything, upload a running example to github
+
+Ultimately, TPUs.
+
+
+ISSUES:
+	So far, it is programmed to accept one client at a time, and process one job at a time.

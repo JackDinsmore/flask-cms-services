@@ -1,0 +1,10 @@
+Dockerfile
+README.md
+*.bat
+*.pyc
+*.pyo
+*.pyd
+image.bmp
+client.py
+procedure.txt
+__pycache__

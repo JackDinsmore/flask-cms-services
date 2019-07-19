@@ -1,0 +1,8 @@
+Push this folder to a container using
+	gcloud builds submit --tag grc.io/harrisgroup-223921/<<<NAME>>> .
+
+Create a cluster and name it whatever you want
+
+Deploy the cluster, using the <<<NAME>>> above as the image, and add PORT as an environment label (in the first of the two parts of the deployment page) with the value being 5000.
+
+Expose the cluster on the port 5000.

@@ -1,0 +1,30 @@
+<DOCTYPE! html>
+<head>
+<title>MLaaS</title>
+<style>
+body {
+  font-family:Arial, sans-serif;
+}
+</style>
+</head>
+
+<body>
+<h1>Server Diagnostics</h1>
+<a href="/">Home</a>
+<p>Here are some facts about the server, which are provided for debugging purposes</p>
+<p>Number of connected pages: <bf>{{ page_mag }}</bf></p>
+<table>
+  <th>
+    <td>Client IP</td>
+    <td>Client internal IP</td>
+  </th>
+  {% for i in range(client_num) %}
+    <tr>
+      <td>{{ client_ids[i][0] }}</td>
+      <td>{{ client_ids[i][1]['id'] }}</td>
+    </tr>
+  {% endfor %}
+</table>
+
+</body>
+</html>
