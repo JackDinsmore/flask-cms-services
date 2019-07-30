@@ -5,6 +5,20 @@
 body {
   font-family:Arial, sans-serif;
 }
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+td, th {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+
+tr:nth-child(even) {
+  background-color: #dddddd;
+}
 </style>
 </head>
 
@@ -14,10 +28,10 @@ body {
 <p>Here are some facts about the server, which are provided for debugging purposes</p>
 <p>Number of connected pages: <bf>{{ page_mag }}</bf></p>
 <table>
-  <th>
-    <td>Client IP</td>
-    <td>Client internal IP</td>
-  </th>
+  <tr>
+    <th>Client IP</th>
+    <th>Client internal ID</th>
+  </tr>
   {% for i in range(client_num) %}
     <tr>
       <td>{{ client_ids[i][0] }}</td>

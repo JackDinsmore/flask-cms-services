@@ -68,4 +68,4 @@ while input() == '':
     # the index of the largest value in the list will give the most likely
     # answer.
     answer_list=list(answer[0])
-    print("Prediction: answer_list.index(max(answer_list)))")
+    print("Prediction:", answer_list.index(max(answer_list)))

@@ -1,5 +1,5 @@
 Push this folder to a container using
-	gcloud builds submit --tag grc.io/harrisgroup-223921/<<<NAME>>> .
+	gcloud builds submit --tag gcr.io/harrisgroup-223921/<<<NAME>>> .
 
 Create a cluster and name it whatever you want
 

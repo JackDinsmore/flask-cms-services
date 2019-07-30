@@ -49,12 +49,15 @@ def home():
 
 @app.route('/status', methods=['GET'])
 def status():
-    return render_template('status.html', page_mag=len(pages), client_ids=client_ids.items(), client_num=len(client_ids))
+    items = list(client_ids.items())
+    print(items[0][0])
+    return render_template('status.html', page_mag=len(pages), client_ids=list(client_ids.items()), client_num=len(client_ids))
 
 
 @app.route('/', methods=['POST'])
 def receive():
     global pkg_data, client_ids
+    print(request.user_agent)
     if 'id' in request.form:
         # Get status
         pass

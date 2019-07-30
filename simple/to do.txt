@@ -3,9 +3,9 @@ To do friday, 7/19/19
 Make it so you can quit and get the info back
 	Submit information back to the client as a dict, not a string. Or as a csv?
 
-GRCP
+Client ids for each process on one ip
 
-Test for multiple random images
+GRCP
 
 Volume testing
 
